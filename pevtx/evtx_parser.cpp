@@ -2,6 +2,7 @@
 #include <iterator>
 #include <algorithm>
 #include <pevtx/evtx_parser.hpp>
+#include <pevtx/chunk.hpp>
 
 namespace pevtx
 {
@@ -22,6 +23,7 @@ void evtx_parser::parse(const std::string &filename, evtx &e)
 	std::search(iterator(in), iterator(), std::begin(magic), std::end(magic));
 	if(!good()) break;
 
+	chunk ch;
 	parse_chunk_header();
     }
 }

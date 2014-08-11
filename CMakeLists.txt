@@ -7,3 +7,5 @@ include_directories(${CMAKE_SOURCE_DIR})
 
 aux_source_directory(pevtx SOURCE)
 add_library(${PROJECT_NAME} ${SOURCE})
+
+add_subdirectory(example)
