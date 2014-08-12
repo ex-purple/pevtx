@@ -8,6 +8,18 @@ bool reader::good() const
     return ((in != nullptr) && (in->good()));
 }
 
+std::size_t reader::position() const
+{
+    check();
+    return in->tellg();
+}
+
+std::istream& reader::get_stream()
+{
+    check();
+    return *in;
+}
+
 void reader::set_stream(std::istream &stream)
 {
     in = &stream;
@@ -17,6 +29,12 @@ void reader::skip(std::size_t size) const
 {
     check();
     in->seekg(size, in->cur);
+}
+
+int reader::get() const
+{
+    check();
+    return in->get();
 }
 
 void reader::read(std::wstring &data, std::size_t size) const

@@ -1,6 +1,8 @@
 #ifndef PEVTX_EVTX_HPP_INCLUDED
 #define PEVTX_EVTX_HPP_INCLUDED
 
+#include <pevtx/chunk.hpp>
+
 namespace pevtx
 {
 

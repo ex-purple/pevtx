@@ -24,12 +24,22 @@ void evtx_parser::parse(const std::string &filename, evtx &e)
 	if(!good()) break;
 
 	chunk ch;
-	parse_chunk_header();
+	parse_chunk_header(ch);
+
+	uint64_t id;
+	do
+	{
+	    record rec;
+	    parse_record(ch, rec);
+	    id = rec.get_id();
+
+	} while(id != ch.get_last_record_id());
     }
 }
 
 void evtx_parser::parse_file_header()
 {
+std::cout << __FUNCTION__ << std::endl;
     std::array<uint8_t, 8> magic;
     uint64_t oldest_chunk;
     uint64_t current_chunk_number;
@@ -56,10 +66,9 @@ void evtx_parser::parse_file_header()
     read(checksum);
 }
 
-void evtx_parser::parse_chunk_header()
+void evtx_parser::parse_chunk_header(chunk &ch)
 {
-    uint64_t num_log_rec_first;
-    uint64_t num_log_rec_last;
+std::cout << __FUNCTION__ << std::endl;
     uint64_t num_file_rec_first;
     uint64_t num_file_rec_last;
     uint32_t ofs_tables;
@@ -70,8 +79,9 @@ void evtx_parser::parse_chunk_header()
     std::array<uint32_t, 64> string_table;
     std::array<uint32_t, 32> template_table;
 
-    read(num_log_rec_first);
-    read(num_log_rec_last);
+    read(ch.first_record_id);
+    read(ch.last_record_id);
+
     read(num_file_rec_first);
     read(num_file_rec_last);
     read(ofs_tables);
@@ -82,6 +92,23 @@ void evtx_parser::parse_chunk_header()
     read(header_crc);
     read(string_table);
     read(template_table);
+}
+
+void evtx_parser::parse_record(chunk &ch, record &rec)
+{
+std::cout << __FUNCTION__ << std::endl;
+    std::array<uint8_t, 4> magic;
+    uint32_t length1;
+    uint64_t filetime;
+
+    read(magic);
+    read(length1);
+    read(rec.id);
+    read(filetime);
+
+    binxml_parser bxp;
+    binxml_node node;
+    bxp.parse(get_stream(), ch, node);
 }
 
 } // namespace pevtx

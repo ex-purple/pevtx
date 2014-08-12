@@ -1,5 +1,5 @@
-#ifndef READER_HPP_INCLUDED
-#define READER_HPP_INCLUDED
+#ifndef PEVTX_READER_HPP_INCLUDED
+#define PEVTX_READER_HPP_INCLUDED
 
 #include <istream>
 #include <array>
@@ -11,9 +11,13 @@ class reader
 {
 public:
     bool good() const;
+    std::size_t position() const;
+    std::istream& get_stream();
     void set_stream(std::istream &stream);    
 
     void skip(std::size_t size) const;
+
+    int get() const;
 
     template<typename T> 
     void read(T &data) const;

@@ -14,7 +14,8 @@ public:
 
 private:
     void parse_file_header();
-    void parse_chunk_header();
+    void parse_chunk_header(chunk &ch);
+    void parse_record(chunk &ch, record &rec);
 
     evtx *ev;
 };
