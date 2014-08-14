@@ -1,3 +1,4 @@
+#include <boost/property_tree/xml_parser.hpp>
 #include <boost/locale.hpp>
 #include <pevtx/binxml.hpp>
 #include <pevtx/chunk.hpp>
@@ -24,7 +25,7 @@ void binxml_parser::parse(std::istream &stream, chunk &chunk, binxml_node &node)
     do
     {
 	auto sym = get();
-//std::cout << "token: " << std::hex << std::showbase << sym << std::dec << std::endl;
+//std::cout << "token: " << std::hex << std::showbase << sym << std::endl;
 	bool more_bits = ((sym & 0xf0) == 0x40);
 	switch(static_cast<token>(sym & 0x0f))
 	{
@@ -98,92 +99,70 @@ void binxml_parser::parse(std::istream &stream, chunk &chunk, binxml_node &node)
 
 void binxml_parser::on_end_of_stream()
 {
-std::cout << __FUNCTION__ << std::endl;
     stack.pop_back();
     stop = true;
 }
 
 void binxml_parser::on_open_start_element(bool more_bits)
 {
-std::cout << __FUNCTION__ << std::endl;
     skip(2); //unknown
 
-    uint32_t size, string_offset, next_offset;
+    uint32_t size;
     read(size);
-    read(string_offset);
-    read(next_offset);
 
-    uint16_t hash, string_length;
-    read(hash);
-    read(string_length);
-
-    std::string name;
-    to_utf8(name, string_length);
-
-    skip(more_bits ? 6 : 2);
+    std::string name = read_string();
+    if(more_bits) skip(4);
 
     auto &child = stack.back()->add_child(name, binxml_node());
     stack.push_back(&child);
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+    stack_path.push_back(name);
 }
 
 void binxml_parser::on_close_start_element()
 {
-std::cout << __FUNCTION__ << std::endl;
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+
 }
 
 void binxml_parser::on_close_empty_element()
 {
-std::cout << __FUNCTION__ << std::endl;
     stack.pop_back();
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+    stack_path.pop_back();
 }
 
 void binxml_parser::on_close_element()
 {
-std::cout << __FUNCTION__ << std::endl;
     stack.pop_back();
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+    stack_path.pop_back();
 }
 
 void binxml_parser::on_value()
 {
-std::cout << __FUNCTION__ << std::endl;
     uint8_t type;
     uint16_t size;
     read(type);
     read(size);
 
     value val;
-    val.read(static_cast<value_type>(type), size, get_stream());
+    val.read(get_stream(), static_cast<value_type>(type), size);
 
     stack.back()->put_value(val);
-    stack.pop_back();
+    std::string subpath = stack[stack.size() - 2]->back().first;
 
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+    if(subpath == "<xmlattr>")
+    {
+	stack.pop_back();
+	stack_path.pop_back();
+    }
 }
 
 void binxml_parser::on_attribute()
 {
-std::cout << __FUNCTION__ << std::endl;
-    uint32_t string_offset, next_offset;
-    read(string_offset);
-    read(next_offset);
+    std::string name = read_string();
 
-    uint16_t hash, string_length;
-    read(hash);
-    read(string_length);
-
-    std::string name;
-    to_utf8(name, string_length);
-
-    skip(2);
-
-    auto &attr = stack.back()->add_child("<xmlattr>." + name, binxml_node());
+    std::string path = "<xmlattr>." + name;
+    auto &attr = stack.back()->add_child(path, binxml_node());
     stack.push_back(&attr);
-
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+    stack_path.push_back(path);
 }
 
 void binxml_parser::on_cdata_section()
@@ -208,7 +187,6 @@ void binxml_parser::on_processing_instruction_data()
 
 void binxml_parser::on_template_instance()
 {
-std::cout << __FUNCTION__ << std::endl;
     skip(1);
 
     uint32_t template_id, template_offset, next_offset;
@@ -216,8 +194,11 @@ std::cout << __FUNCTION__ << std::endl;
     read(template_offset);
     read(next_offset);
 
+    bool new_template = false;
     if(!current_chunk->has_template(template_id))
     {
+	new_template = true;
+
 	read(template_id);
 	skip(16);
 
@@ -231,6 +212,12 @@ std::cout << __FUNCTION__ << std::endl;
     auto &tmpl = current_chunk->get_template(template_id);
     *root = tmpl;
 
+    if(new_template)
+    {
+	uint32_t size;
+	read(size);
+    }
+
     std::size_t size = tmpl.subs.size();
     value_spec vs_arr[size];
     for(std::size_t i = 0; i < size; ++i)
@@ -242,48 +229,103 @@ std::cout << __FUNCTION__ << std::endl;
 
     for(std::size_t i = 0; i < size; ++i)
     {
-	value val;
-	val.read(vs_arr[i], get_stream());
+	if(vs_arr[i].type == value_type::bxml_type)
+	{
+	    binxml_node node;
+	    binxml_parser bxml;
+	    bxml.parse(get_stream(), *current_chunk, node);
 
-//	root->put(tmpl);	
+	    auto itr = root->find(tmpl.subs.at(i));
+	    if(itr != root->not_found())
+	    {
+		std::copy(node.begin(), node.end(), std::back_inserter(itr->second));
+	    }
+
+	}
+	else
+	{
+	    value val;
+	    val.read(get_stream(), vs_arr[i]);
+	    root->put(tmpl.subs.at(i), val);
+	}
     }
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+
+
+boost::property_tree::xml_writer_settings<char> settings('\t', 1);
+boost::property_tree::write_xml(std::cout, *root, settings);
+std::cout << std::endl;
+
 }
 
 void binxml_parser::on_normal_substitution()
 {
-
-}
-
-void binxml_parser::on_conditional_substitution()
-{
-std::cout << __FUNCTION__ << std::endl;
     uint16_t index;
     uint8_t type;
 
     read(index);
     read(type);
 
-//std::cout << "current path: " << get_current_path() << std::endl;
-
-    stack.back()->put_value(value());
     static_cast<binxml_template*>(root)->subs[index] = get_current_path();
+    static_cast<binxml_template*>(root)->subs2[index] = stack.back();
 
     std::string subpath = stack[stack.size() - 2]->back().first;
-//std::cout << "subpath: " << subpath << std::endl;
     
-    if(subpath == "<xmlattr>") {stack.pop_back();}
+    if(subpath == "<xmlattr>") 
+    {
+	stack.pop_back();
+	stack_path.pop_back();
+    }
+}
 
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+void binxml_parser::on_conditional_substitution()
+{
+    uint16_t index;
+    uint8_t type;
+
+    read(index);
+    read(type);
+
+    static_cast<binxml_template*>(root)->subs[index] = get_current_path();
+    static_cast<binxml_template*>(root)->subs2[index] = stack.back();
+
+    std::string subpath = stack[stack.size() - 2]->back().first;
+    
+    if(subpath == "<xmlattr>") 
+    {
+	stack.pop_back();
+	stack_path.pop_back();
+    }
 }
 
 void binxml_parser::on_start_of_stream()
 {
-std::cout << __FUNCTION__ << std::endl;
     skip(3);
     stack.push_back(root);
+}
 
-std::cout << "current path: " << get_current_path() << " stack size: " << stack.size() <<  std::endl;
+std::string binxml_parser::read_string()
+{
+    std::string retval;
+    uint32_t string_offset;
+    read(string_offset);
+
+    if(current_chunk->has_string(string_offset)) retval = current_chunk->get_string(string_offset);
+    else
+    {
+	uint32_t next_offset;
+	read(next_offset);
+
+        uint16_t hash, string_length;
+        read(hash);
+        read(string_length);
+
+        to_utf8(retval, string_length);
+
+	skip(2);
+
+	current_chunk->add_string(string_offset, retval);
+    }
+    return retval;
 }
 
 void binxml_parser::to_utf8(std::string &str, std::size_t length) const
@@ -295,25 +337,14 @@ void binxml_parser::to_utf8(std::string &str, std::size_t length) const
 
 std::string binxml_parser::get_current_path() const
 {
-
-    std::string path, subpath;
-    binxml_node *node = nullptr;
-    for(auto *n:stack)
+    std::string path;
+    for(auto &x:stack_path)
     {
-	if(n->empty()) break;
 	if(!path.empty()) path += '.';
-
-	subpath = n->back().first;
-	path += subpath;
-
-	node = n;
-
-std::cout << '\t' << subpath << std::endl;
+	path += x;
     }
-
-    if(node && (subpath == "<xmlattr>")) path += "." + node->back().second.back().first;
-
     return path;
 }
 
 } // namespace pevtx
+ 

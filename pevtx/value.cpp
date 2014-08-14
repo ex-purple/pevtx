@@ -1,13 +1,20 @@
 #include <boost/locale.hpp>
 #include <pevtx/value.hpp>
 #include <pevtx/reader.hpp>
+#include <pevtx/binxml.hpp>
 
 namespace pevtx
 {
 
 struct reader_visitor : public boost::static_visitor<>, public reader
 {
-    reader_visitor(std::size_t s, std::istream &stream) : reader(stream), size(s) {}
+    reader_visitor(std::istream &stream, std::size_t s) 
+	: reader(stream),
+	  in(stream),
+	  size(s) 
+    {
+
+    }
 
     template<typename T>
     void operator()(T &value) const {read(value);}
@@ -16,9 +23,12 @@ struct reader_visitor : public boost::static_visitor<>, public reader
     void operator()(value_helper<value_type::wstring_type>::type &data) const {read(data, size);}
     void operator()(value_helper<value_type::guid_type>::type &data) const {read(data);}
     void operator()(value_helper<value_type::filetime_type>::type &data) const {skip(size);}
+    void operator()(value_helper<value_type::systemtime_type>::type &data) const {skip(size);}
+    void operator()(value_helper<value_type::sid_type>::type &data) const {skip(size);}
+    void operator()(value_helper<value_type::hex32_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::hex64_type>::type &data) const {skip(size);}
-    void operator()(value_helper<value_type::bxml_type>::type &data) const {skip(size);}
 
+    std::istream &in;
     std::size_t size;
 };
 
@@ -31,13 +41,15 @@ struct str_visitor : public boost::static_visitor<std::string>
     std::string operator()(const value_helper<value_type::wstring_type>::type &data) const {return boost::locale::conv::utf_to_utf<char, wchar_t>(data.c_str(), data.c_str() + data.size());}
     std::string operator()(const value_helper<value_type::guid_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::filetime_type>::type &data) const {return std::string();}
+    std::string operator()(const value_helper<value_type::systemtime_type>::type &data) const {return std::string();}
+    std::string operator()(const value_helper<value_type::sid_type>::type &data) const {return std::string();}
+    std::string operator()(const value_helper<value_type::hex32_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::hex64_type>::type &data) const {return std::string();}
-    std::string operator()(const value_helper<value_type::bxml_type>::type &data) const {return std::string();}
 };
 
 value::operator std::string() const
 {
-    return boost::apply_visitor(str_visitor(), data);
+    return str();
 }
 
 bool value::empty() const
@@ -50,16 +62,9 @@ value_type value::type() const
     return type_;
 }
 
-void value::read(const value_spec &vs, std::istream &stream)
+std::string value::str() const
 {
-    init(vs.type);
-    boost::apply_visitor(reader_visitor(vs.size, stream), data);
-}
-
-void value::read(value_type type, uint16_t size, std::istream &stream)
-{
-    init(type);
-    boost::apply_visitor(reader_visitor(size, stream), data);
+    return boost::apply_visitor(str_visitor(), data);
 }
 
 #define VALUE_INIT_CASE(t) \
@@ -83,12 +88,26 @@ void value::init(value_type type)
         VALUE_INIT_CASE(value_type::uint64_type);
 	VALUE_INIT_CASE(value_type::guid_type);
 	VALUE_INIT_CASE(value_type::filetime_type);
+	VALUE_INIT_CASE(value_type::systemtime_type);
+	VALUE_INIT_CASE(value_type::sid_type);
+	VALUE_INIT_CASE(value_type::hex32_type);
 	VALUE_INIT_CASE(value_type::hex64_type);
-	VALUE_INIT_CASE(value_type::bxml_type);
 	default: 
 	    throw std::runtime_error("Bad type!");
     }
     type_ = type;
+}
+
+void value::read(std::istream &stream, const value_spec &vs)
+{
+    init(vs.type);
+    boost::apply_visitor(reader_visitor(stream, vs.size), data);
+}
+
+void value::read(std::istream &stream, value_type type, uint16_t size)
+{
+    init(type);
+    boost::apply_visitor(reader_visitor(stream, size), data);
 }
 
 } // namespace pevtx

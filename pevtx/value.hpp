@@ -55,6 +55,12 @@ struct value_helper<value_type::wstring_type>
 };
 
 template<>
+struct value_helper<value_type::string_type>
+{
+    using type = std::string;
+};
+
+template<>
 struct value_helper<value_type::int8_type>
 {
     typedef int8_t type;
@@ -115,17 +121,27 @@ struct value_helper<value_type::filetime_type>
 };
 
 template<>
-struct value_helper<value_type::hex64_type>
+struct value_helper<value_type::systemtime_type>
 {
-    typedef std::vector<uint64_t> type;
+    using type = std::array<uint16_t, 8>;
 };
 
-class binxml_node_proxy;
+template<>
+struct value_helper<value_type::sid_type>
+{
+    using type = void*;
+};
 
 template<>
-struct value_helper<value_type::bxml_type>
+struct value_helper<value_type::hex32_type>
 {
-    typedef std::shared_ptr<binxml_node_proxy> type;
+    using type = std::vector<uint32_t>;
+};
+
+template<>
+struct value_helper<value_type::hex64_type>
+{
+    using type = std::vector<uint64_t>;
 };
 
 struct value_spec
@@ -133,6 +149,8 @@ struct value_spec
     value_type type;
     uint16_t size;
 };
+
+class chunk;
 
 class value
 {
@@ -150,22 +168,26 @@ public:
 			    value_helper<value_type::uint64_type>::type,
 			    value_helper<value_type::guid_type>::type,
 			    value_helper<value_type::filetime_type>::type,
-			    value_helper<value_type::hex64_type>::type,
-			    value_helper<value_type::bxml_type>::type> data_type;
+			    value_helper<value_type::systemtime_type>::type,
+			    value_helper<value_type::sid_type>::type,
+			    value_helper<value_type::hex32_type>::type,
+			    value_helper<value_type::hex64_type>::type> data_type;
 
     operator std::string() const;
 
     bool empty() const;
     value_type type() const;
-
-    void read(const value_spec &vs, std::istream &stream);
-    void read(value_type type, uint16_t size, std::istream &stream);
+    std::string str() const;
 
 private:
     void init(value_type type);
+    void read(std::istream &stream, const value_spec &vs);
+    void read(std::istream &stream, value_type type, uint16_t size);
 
     value_type type_;
     data_type data;
+
+friend class binxml_parser;
 };
 
 } // namespace pevtx

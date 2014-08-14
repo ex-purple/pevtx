@@ -1,7 +1,7 @@
 project(pevtx CXX)
 cmake_minimum_required(VERSION 2.8)
 
-set(CMAKE_CXX_FLAGS -std=c++11)
+set(CMAKE_CXX_FLAGS "-std=c++11 -g")
 
 include_directories(${CMAKE_SOURCE_DIR})
 

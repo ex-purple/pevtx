@@ -69,6 +69,8 @@ std::cout << __FUNCTION__ << std::endl;
 void evtx_parser::parse_chunk_header(chunk &ch)
 {
 std::cout << __FUNCTION__ << std::endl;
+    ch.offset = position();
+
     uint64_t num_file_rec_first;
     uint64_t num_file_rec_last;
     uint32_t ofs_tables;
@@ -79,11 +81,11 @@ std::cout << __FUNCTION__ << std::endl;
     std::array<uint32_t, 64> string_table;
     std::array<uint32_t, 32> template_table;
 
-    read(ch.first_record_id);
-    read(ch.last_record_id);
-
     read(num_file_rec_first);
     read(num_file_rec_last);
+
+    read(ch.first_record_id);
+    read(ch.last_record_id);
     read(ofs_tables);
     read(ofs_rec_last);
     read(ofs_rec_next);
@@ -96,7 +98,8 @@ std::cout << __FUNCTION__ << std::endl;
 
 void evtx_parser::parse_record(chunk &ch, record &rec)
 {
-std::cout << __FUNCTION__ << std::endl;
+    auto start = position();
+
     std::array<uint8_t, 4> magic;
     uint32_t length1;
     uint64_t filetime;
@@ -109,6 +112,8 @@ std::cout << __FUNCTION__ << std::endl;
     binxml_parser bxp;
     binxml_node node;
     bxp.parse(get_stream(), ch, node);
+
+    skip(length1 - (position() - start));
 }
 
 } // namespace pevtx

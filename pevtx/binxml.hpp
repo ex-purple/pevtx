@@ -40,10 +40,12 @@ enum class token
 
 using binxml_node = boost::property_tree::basic_ptree<std::string, value>;
 using map_substitution = std::map<uint16_t, std::string>;
+using map_substitution2 = std::map<uint16_t, binxml_node*>;
 
 struct binxml_template : public binxml_node
 {
     map_substitution subs;
+    map_substitution2 subs2;
 };
 
 class chunk;
@@ -71,6 +73,7 @@ private:
     void on_normal_substitution();
     void on_conditional_substitution();
     void on_start_of_stream();
+    std::string read_string();
     void to_utf8(std::string &str, std::size_t length) const;
     std::string get_current_path() const;
 
@@ -78,6 +81,7 @@ private:
     chunk *current_chunk;
     binxml_node *root;
     std::vector<binxml_node*> stack;
+    std::vector<std::string> stack_path;
 };
 
 }
