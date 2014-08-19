@@ -10,8 +10,9 @@ namespace pevtx
 class chunk
 {
 public:
-    typedef std::map<uint32_t, std::string> map_string;
-    typedef std::map<uint32_t, binxml_template> map_template;
+    using records_list = std::vector<record>;
+    using map_string = std::map<uint32_t, std::string>;
+    using map_template = std::map<uint32_t, binxml_template>;
 
     uint32_t get_offset() const;
     uint64_t get_first_record_id() const;
@@ -25,11 +26,14 @@ public:
     const binxml_template& get_template(uint32_t template_id) const;
     void add_template(uint32_t template_id, const binxml_template &node);
 
+    const records_list& get_records() const;
+
 private:
     uint32_t offset;
     uint64_t first_record_id, last_record_id;
     map_string strings;
     map_template templates;
+    records_list records;
 
 friend class evtx_parser;
 };

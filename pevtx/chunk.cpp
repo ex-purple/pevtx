@@ -18,6 +18,11 @@ uint64_t chunk::get_last_record_id() const
     return last_record_id;
 }
 
+const chunk::records_list& chunk::get_records() const
+{
+    return records;
+}
+
 bool chunk::has_string(uint32_t string_id) const
 {
     return (strings.find(string_id) != strings.end());

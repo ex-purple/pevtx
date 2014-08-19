@@ -33,13 +33,16 @@ void evtx_parser::parse(const std::string &filename, evtx &e)
 	    parse_record(ch, rec);
 	    id = rec.get_id();
 
+	    ch.records.emplace_back(rec);
+
 	} while(id != ch.get_last_record_id());
+
+	ev->chunks.emplace_back(ch);
     }
 }
 
 void evtx_parser::parse_file_header()
 {
-std::cout << __FUNCTION__ << std::endl;
     std::array<uint8_t, 8> magic;
     uint64_t oldest_chunk;
     uint64_t current_chunk_number;
@@ -68,7 +71,6 @@ std::cout << __FUNCTION__ << std::endl;
 
 void evtx_parser::parse_chunk_header(chunk &ch)
 {
-std::cout << __FUNCTION__ << std::endl;
     ch.offset = position();
 
     uint64_t num_file_rec_first;
@@ -98,7 +100,6 @@ std::cout << __FUNCTION__ << std::endl;
 
 void evtx_parser::parse_record(chunk &ch, record &rec)
 {
-std::cout << __FUNCTION__ << std::endl;
     auto start = position();
 
     std::array<uint8_t, 4> magic;
@@ -111,8 +112,7 @@ std::cout << __FUNCTION__ << std::endl;
     read(filetime);
 
     binxml_parser bxp;
-    binxml_node node;
-    bxp.parse(get_stream(), ch, node);
+    bxp.parse(get_stream(), ch, rec.root);
 
     skip(length1 - (position() - start));
 }

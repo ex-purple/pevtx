@@ -8,6 +8,13 @@ namespace pevtx
 
 class evtx
 {
+public:
+    using chunk_list = std::vector<chunk>;
+
+    const chunk_list& get_chunks() const;
+
+private:
+    chunk_list chunks;
 
 friend class evtx_parser;
 };
