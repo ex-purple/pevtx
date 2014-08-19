@@ -2,6 +2,7 @@
 #define PEVTX_BINXML_HPP_INCLUDED
 
 #include <map>
+#include <unordered_map>
 #include <vector>
 #include <boost/property_tree/ptree.hpp>
 #include <pevtx/reader.hpp>
@@ -40,11 +41,13 @@ enum class token
 
 using binxml_node = boost::property_tree::basic_ptree<std::string, value>;
 using path = std::vector<std::size_t>;
-using map_substitution = std::map<uint16_t, path>;
+using map_substitution = std::unordered_map<uint16_t, path>;
 
 class binxml_template : public binxml_node
 {
 public:
+    virtual ~binxml_template() {}
+
     static binxml_node* get_child(binxml_node *node, std::size_t pos);
     std::size_t count_substitutions() const;
     binxml_node* get_substitution(uint16_t index, binxml_node *root) const;
@@ -61,7 +64,7 @@ class binxml_parser : public reader
 public:
     binxml_parser();
 
-    void parse(std::istream &stream, chunk &chunk, binxml_node &node);
+    void parse(std::istream &stream, chunk &chunk, binxml_node &node, bool template_definition = false);
 
 private:
     void on_end_of_stream();
@@ -69,8 +72,8 @@ private:
     void on_close_start_element();
     void on_close_empty_element();
     void on_close_element();
-    void on_value();
-    void on_attribute();
+    void on_value(bool more_bits);
+    void on_attribute(bool more_bits);
     void on_cdata_section();
     void on_entity_reference();
     void on_processing_instruction_target();
@@ -83,7 +86,7 @@ private:
     void to_utf8(std::string &str, std::size_t length) const;
     std::string get_current_path() const;
 
-    bool stop;
+    bool stop, is_template_definition;
     chunk *current_chunk;
     binxml_node *root;
     std::vector<binxml_node*> stack;

@@ -98,6 +98,7 @@ std::cout << __FUNCTION__ << std::endl;
 
 void evtx_parser::parse_record(chunk &ch, record &rec)
 {
+std::cout << __FUNCTION__ << std::endl;
     auto start = position();
 
     std::array<uint8_t, 4> magic;

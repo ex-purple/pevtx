@@ -45,13 +45,13 @@ class null
 template<value_type ValType = value_type::null_type>
 struct value_helper 
 {
-    typedef null type;
+    using type = null;
 };
 
 template<>
 struct value_helper<value_type::wstring_type>
 {
-    typedef std::wstring type;
+    using type = std::wstring;
 };
 
 template<>
@@ -63,61 +63,73 @@ struct value_helper<value_type::string_type>
 template<>
 struct value_helper<value_type::int8_type>
 {
-    typedef int8_t type;
+    using type = int8_t;
 };
 
 template<>
 struct value_helper<value_type::uint8_type>
 {
-    typedef uint8_t type;
+    using type =  uint8_t;
 };
 
 template<>
 struct value_helper<value_type::int16_type>
 {
-    typedef int16_t type;
+    using type = int16_t;
 };
 
 template<>
 struct value_helper<value_type::uint16_type>
 {
-    typedef uint16_t type;
+    using type = uint16_t;
 };
 
 template<>
 struct value_helper<value_type::int32_type>
 {
-    typedef int32_t type;
+    using type = int32_t;
 };
 
 template<>
 struct value_helper<value_type::uint32_type>
 {
-    typedef uint32_t type;
+    using type = uint32_t;
 };
 
 template<>
 struct value_helper<value_type::int64_type>
 {
-    typedef int64_t type;
+    using type = int64_t;
 };
 
 template<>
 struct value_helper<value_type::uint64_type>
 {
-    typedef uint64_t type;
+    using type = uint64_t;
+};
+
+template<>
+struct value_helper<value_type::boolean_type>
+{
+    using type = bool;
+};
+
+template<>
+struct value_helper<value_type::binary_type>
+{
+    using type = std::vector<uint8_t>;
 };
 
 template<>
 struct value_helper<value_type::guid_type>
 {
-    typedef std::array<uint8_t, 16> type;
+    using type = std::array<uint8_t, 16>;
 };
 
 template<>
 struct value_helper<value_type::filetime_type>
 {
-    typedef std::pair<uint64_t, uint64_t> type;
+    using type = std::pair<uint64_t, uint64_t>;
 };
 
 template<>
@@ -144,6 +156,12 @@ struct value_helper<value_type::hex64_type>
     using type = std::vector<uint64_t>;
 };
 
+template<>
+struct value_helper<value_type::wstring_array_type>
+{
+    using type = std::vector<std::wstring>;
+};
+
 struct value_spec
 {
     value_type type;
@@ -166,12 +184,15 @@ public:
 			    value_helper<value_type::uint32_type>::type,
 			    value_helper<value_type::int64_type>::type,
 			    value_helper<value_type::uint64_type>::type,
+			    value_helper<value_type::boolean_type>::type,
+			    value_helper<value_type::binary_type>::type,
 			    value_helper<value_type::guid_type>::type,
 			    value_helper<value_type::filetime_type>::type,
 			    value_helper<value_type::systemtime_type>::type,
 			    value_helper<value_type::sid_type>::type,
 			    value_helper<value_type::hex32_type>::type,
-			    value_helper<value_type::hex64_type>::type> data_type;
+			    value_helper<value_type::hex64_type>::type,
+			    value_helper<value_type::wstring_array_type>::type> data_type;
 
     operator std::string() const;
 

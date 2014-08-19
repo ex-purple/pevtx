@@ -19,14 +19,16 @@ struct reader_visitor : public boost::static_visitor<>, public reader
     template<typename T>
     void operator()(T &value) const {read(value);}
 
-    void operator()(value_helper<value_type::null_type>::type &data) const {}
+    void operator()(value_helper<value_type::null_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::wstring_type>::type &data) const {read(data, size);}
+    void operator()(value_helper<value_type::binary_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::guid_type>::type &data) const {read(data);}
     void operator()(value_helper<value_type::filetime_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::systemtime_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::sid_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::hex32_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::hex64_type>::type &data) const {skip(size);}
+    void operator()(value_helper<value_type::wstring_array_type>::type &data) const {skip(size);}
 
     std::istream &in;
     std::size_t size;
@@ -39,12 +41,15 @@ struct str_visitor : public boost::static_visitor<std::string>
 
     std::string operator()(const value_helper<value_type::null_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::wstring_type>::type &data) const {return boost::locale::conv::utf_to_utf<char, wchar_t>(data.c_str(), data.c_str() + data.size());}
+    std::string operator()(const value_helper<value_type::boolean_type>::type &data) const {return (data ? "true" : "false");}
+    std::string operator()(const value_helper<value_type::binary_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::guid_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::filetime_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::systemtime_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::sid_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::hex32_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::hex64_type>::type &data) const {return std::string();}
+    std::string operator()(const value_helper<value_type::wstring_array_type>::type &data) const {return std::string();}
 };
 
 value::operator std::string() const
@@ -86,13 +91,17 @@ void value::init(value_type type)
         VALUE_INIT_CASE(value_type::uint32_type);
 	VALUE_INIT_CASE(value_type::int64_type);
         VALUE_INIT_CASE(value_type::uint64_type);
+	VALUE_INIT_CASE(value_type::boolean_type);
+	VALUE_INIT_CASE(value_type::binary_type);
 	VALUE_INIT_CASE(value_type::guid_type);
 	VALUE_INIT_CASE(value_type::filetime_type);
 	VALUE_INIT_CASE(value_type::systemtime_type);
 	VALUE_INIT_CASE(value_type::sid_type);
 	VALUE_INIT_CASE(value_type::hex32_type);
 	VALUE_INIT_CASE(value_type::hex64_type);
+	VALUE_INIT_CASE(value_type::wstring_array_type);
 	default: 
+std::cout << std::hex << static_cast<uint16_t>(type) << std::endl;
 	    throw std::runtime_error("Bad type!");
     }
     type_ = type;
