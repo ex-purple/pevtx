@@ -54,17 +54,18 @@ template<typename T>
 struct hex
 {
     hex(T value = 0) : data(value) {}
-    std::string str() const
-    {
-	std::stringstream ss;
-	ss << std::showbase << std::hex << data;
-	return ss.str();
-    }
     T data;
 };
 
 using hex32 = hex<uint32_t>;
 using hex64 = hex<uint64_t>;
+
+struct sid
+{
+    uint8_t version;
+    uint64_t id;
+    std::vector<uint32_t> elements;
+};
 
 
 template<value_type ValType = value_type::null_type>
@@ -166,7 +167,7 @@ struct value_helper<value_type::systemtime_type>
 template<>
 struct value_helper<value_type::sid_type>
 {
-    using type = void*;
+    using type = sid;
 };
 
 template<>

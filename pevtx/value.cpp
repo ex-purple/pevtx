@@ -23,10 +23,25 @@ struct reader_visitor : public boost::static_visitor<>, public reader
     void operator()(value_helper<value_type::null_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::wstring_type>::type &data) const {read(data, size);}
     void operator()(value_helper<value_type::binary_type>::type &data) const {skip(size);}
-    void operator()(value_helper<value_type::guid_type>::type &data) const {read(data);}
     void operator()(value_helper<value_type::filetime_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::systemtime_type>::type &data) const {skip(size);}
-    void operator()(value_helper<value_type::sid_type>::type &data) const {skip(size);}
+    void operator()(value_helper<value_type::sid_type>::type &data) const 
+    {
+	read(data.version);
+
+	uint8_t num_elements;
+	read(num_elements);
+	data.elements.resize(num_elements);
+	
+	uint32_t id_hight;
+	uint16_t id_low;
+	read(id_hight);
+	read(id_low);
+
+	data.id = ((id_hight << 16) | id_low);
+
+	for(std::size_t i = 0; i < num_elements; ++i) read(data.elements[i]);
+    }
     void operator()(value_helper<value_type::wstring_array_type>::type &data) const {skip(size);}
 
     std::istream &in;
@@ -64,17 +79,27 @@ struct str_visitor : public boost::static_visitor<std::string>
 
     std::string operator()(const value_helper<value_type::filetime_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::systemtime_type>::type &data) const {return std::string();}
-    std::string operator()(const value_helper<value_type::sid_type>::type &data) const {return std::string();}
+    std::string operator()(const value_helper<value_type::sid_type>::type &data) const 
+    {
+	std::stringstream ss;
+	ss << "S-" << static_cast<unsigned>(data.version) << '-' << data.id;
+	for(auto &el:data.elements) ss << '-' << el;
+	return ss.str();
+    }
 
 
     std::string operator()(const value_helper<value_type::hex32_type>::type &data) const 
     {
-	return data.str();
+	std::stringstream ss;
+	ss << std::showbase << std::hex << data.data;
+	return ss.str();
     }
 
     std::string operator()(const value_helper<value_type::hex64_type>::type &data) const
     {
-	return data.str();
+	std::stringstream ss;
+	ss << std::showbase << std::hex << data.data;
+	return ss.str();
     }
 
     std::string operator()(const value_helper<value_type::wstring_array_type>::type &data) const {return std::string();}
