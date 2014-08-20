@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <boost/locale.hpp>
 #include <pevtx/value.hpp>
 #include <pevtx/reader.hpp>
@@ -26,8 +27,6 @@ struct reader_visitor : public boost::static_visitor<>, public reader
     void operator()(value_helper<value_type::filetime_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::systemtime_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::sid_type>::type &data) const {skip(size);}
-    void operator()(value_helper<value_type::hex32_type>::type &data) const {skip(size);}
-    void operator()(value_helper<value_type::hex64_type>::type &data) const {skip(size);}
     void operator()(value_helper<value_type::wstring_array_type>::type &data) const {skip(size);}
 
     std::istream &in;
@@ -40,15 +39,44 @@ struct str_visitor : public boost::static_visitor<std::string>
     std::string operator()(const T &data) const {return std::to_string(data);}
 
     std::string operator()(const value_helper<value_type::null_type>::type &data) const {return std::string();}
-    std::string operator()(const value_helper<value_type::wstring_type>::type &data) const {return boost::locale::conv::utf_to_utf<char, wchar_t>(data.c_str(), data.c_str() + data.size());}
+    std::string operator()(const value_helper<value_type::wstring_type>::type &data) const 
+    {
+	return boost::locale::conv::utf_to_utf<char, wchar_t>(data.c_str(), data.c_str() + data.size());
+    }
+
     std::string operator()(const value_helper<value_type::boolean_type>::type &data) const {return (data ? "true" : "false");}
+
     std::string operator()(const value_helper<value_type::binary_type>::type &data) const {return std::string();}
-    std::string operator()(const value_helper<value_type::guid_type>::type &data) const {return std::string();}
+
+    std::string operator()(const value_helper<value_type::guid_type>::type &data) const 
+    {
+	std::stringstream ss;
+	ss << std::hex << '{'	<< data.data1 << '-' 
+				<< data.data2 << '-'
+				<< data.data3 << '-'
+				<< std::setfill('0') << std::setw(2) << static_cast<unsigned>(data.data4[0]) 
+				<< std::setfill('0') << std::setw(2) << static_cast<unsigned>(data.data4[1]) << '-';
+
+	for(size_t i = 2; i < data.data4.size(); ++i) ss << std::setfill('0') << std::setw(2) << static_cast<unsigned>(data.data4[i]);
+	ss << '}';
+	return ss.str();
+    }
+
     std::string operator()(const value_helper<value_type::filetime_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::systemtime_type>::type &data) const {return std::string();}
     std::string operator()(const value_helper<value_type::sid_type>::type &data) const {return std::string();}
-    std::string operator()(const value_helper<value_type::hex32_type>::type &data) const {return std::string();}
-    std::string operator()(const value_helper<value_type::hex64_type>::type &data) const {return std::string();}
+
+
+    std::string operator()(const value_helper<value_type::hex32_type>::type &data) const 
+    {
+	return data.str();
+    }
+
+    std::string operator()(const value_helper<value_type::hex64_type>::type &data) const
+    {
+	return data.str();
+    }
+
     std::string operator()(const value_helper<value_type::wstring_array_type>::type &data) const {return std::string();}
 };
 

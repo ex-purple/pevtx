@@ -37,10 +37,35 @@ enum class value_type : uint16_t
     wstring_array_type =	0x81
 };
 
-class null
+struct null
 {
 
 };
+
+struct guid
+{
+    uint32_t			data1;
+    uint16_t			data2;
+    uint16_t			data3;
+    std::array<uint8_t, 8>	data4;
+};
+
+template<typename T>
+struct hex
+{
+    hex(T value = 0) : data(value) {}
+    std::string str() const
+    {
+	std::stringstream ss;
+	ss << std::showbase << std::hex << data;
+	return ss.str();
+    }
+    T data;
+};
+
+using hex32 = hex<uint32_t>;
+using hex64 = hex<uint64_t>;
+
 
 template<value_type ValType = value_type::null_type>
 struct value_helper 
@@ -123,7 +148,7 @@ struct value_helper<value_type::binary_type>
 template<>
 struct value_helper<value_type::guid_type>
 {
-    using type = std::array<uint8_t, 16>;
+    using type = guid;
 };
 
 template<>
@@ -147,13 +172,13 @@ struct value_helper<value_type::sid_type>
 template<>
 struct value_helper<value_type::hex32_type>
 {
-    using type = std::vector<uint32_t>;
+    using type = hex32;
 };
 
 template<>
 struct value_helper<value_type::hex64_type>
 {
-    using type = std::vector<uint64_t>;
+    using type = hex64;
 };
 
 template<>
